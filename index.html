@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#16866b">
+    <meta name="description" content="برنامه آموزشی تعاملی تغذیه سالم برای دانش‌آموزان">
+    <title>تغذیه سالم | یاد بگیریم سالم زندگی کنیم</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./assets/icons/app-icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./src/styles/main.css">
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="container header-content">
+            <a class="brand" href="./" aria-label="صفحه اصلی تغذیه سالم">
+                <img src="./assets/icons/app-icon.svg" alt="" class="brand-icon">
+                <span>تغذیه سالم</span>
+            </a>
+
+            <button id="installButton" class="install-button" hidden>
+                نصب برنامه
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">آموزش، بازی و زندگی سالم</span>
+                <h1>قهرمان سلامتی خودت باش!</h1>
+                <p>
+                    با یادگیری عادت‌های غذایی و بهداشتی،
+                    هر روز یک قدم به زندگی سالم‌تر نزدیک شو.
+                </p>
+                <a href="#lessons" class="primary-button">شروع یادگیری</a>
+            </div>
+
+            <div class="hero-illustration" aria-hidden="true">
+                <span class="fruit fruit-one">🍎</span>
+                <span class="fruit fruit-two">🥕</span>
+                <span class="fruit fruit-three">🍊</span>
+                <span class="fruit fruit-four">🥦</span>
+                <span class="hero-star">✦</span>
+            </div>
+        </section>
+
+        <section class="progress-section" aria-labelledby="progressTitle">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">مسیر پیشرفت تو</span>
+                    <h2 id="progressTitle">شروع یک مسیر تازه</h2>
+                </div>
+                <span class="progress-icon">🏆</span>
+            </div>
+
+            <div class="progress-card">
+                <div class="progress-stats">
+                    <div>
+                        <span class="stat-value" id="scoreValue">۰</span>
+                        <span class="stat-label">امتیاز</span>
+                    </div>
+                    <div>
+                        <span class="stat-value" id="completedValue">۰ از ۶</span>
+                        <span class="stat-label">درس تکمیل‌شده</span>
+                    </div>
+                    <div>
+                        <span class="stat-value">🥉</span>
+                        <span class="stat-label">کاپ‌ها</span>
+                    </div>
+                </div>
+
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-caption" id="progressCaption">
+                    هنوز سفرت را شروع نکرده‌ای؛ آماده‌ای؟
+                </p>
+            </div>
+        </section>
+
+        <section id="lessons" class="lessons-section">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">دانش‌آموز سالم و شاد</span>
+                    <h2>درس‌های آموزشی</h2>
+                </div>
+                <span class="lesson-count">۶ درس</span>
+            </div>
+
+            <div id="lessonList" class="lesson-grid">
+                <p class="loading-message">در حال آماده‌سازی درس‌ها...</p>
+            </div>
+        </section>
+
+        <section class="message-card">
+            <span class="message-icon">💚</span>
+            <div>
+                <h2>سلامتی با انتخاب‌های کوچک ساخته می‌شود</h2>
+                <p>
+                    انتخاب غذای مناسب، نوشیدن آب کافی،
+                    خواب خوب و رعایت بهداشت، عادت‌هایی ارزشمند هستند.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>تغذیه سالم | آموزش برای زندگی بهتر</p>
+        <p>طراح: ناهید بلبلی</p>
+    </footer>
+
+    <div id="appMessage" class="app-message" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./src/core/app.js"></script>
+</body>
+</html>

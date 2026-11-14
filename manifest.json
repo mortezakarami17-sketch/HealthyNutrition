@@ -1,0 +1,22 @@
+﻿{
+  "id": "./",
+  "name": "تغذیه سالم",
+  "short_name": "تغذیه سالم",
+  "description": "برنامه آموزشی تعاملی تغذیه سالم برای دانش‌آموزان",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5faf7",
+  "theme_color": "#16866b",
+  "icons": [
+    {
+      "src": "./assets/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
