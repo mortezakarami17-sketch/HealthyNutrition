@@ -1,4 +1,18 @@
-﻿const lessons = [
+﻿
+import { lessonContent } from "../lessons/healthy-food/content/content.js";
+
+import {
+    createQuizSession,
+    submitQuizAnswer,
+    getQuizProgress,
+    getCurrentActivity
+} from "../lessons/healthy-food/quiz/quiz-engine.js";
+
+import {
+    createProgressStorage
+} from "../shared/storage/progress-storage.js";
+
+const lessons = [
     {
         id: "healthy-food",
         title: "غذاهای سالم و ناسالم",
@@ -47,7 +61,35 @@ const lessonList = document.getElementById("lessonList");
 const installButton = document.getElementById("installButton");
 const appMessage = document.getElementById("appMessage");
 
+const scoreValue = document.getElementById("scoreValue");
+const completedValue = document.getElementById("completedValue");
+const progressFill = document.getElementById("progressFill");
+const progressCaption = document.getElementById("progressCaption");
+
 let deferredInstallPrompt = null;
+let quizSession = null;
+let pendingFeedback = null;
+let progressStorage;
+
+const lessonViewer = document.createElement("section");
+lessonViewer.className = "lesson-viewer";
+lessonViewer.hidden = true;
+
+lessonList.parentElement.insertBefore(lessonViewer, lessonList);
+
+function createElement(tag, className = "", text = "") {
+    const element = document.createElement(tag);
+
+    if (className) {
+        element.className = className;
+    }
+
+    if (text !== "") {
+        element.textContent = text;
+    }
+
+    return element;
+}
 
 function showMessage(message) {
     appMessage.textContent = message;
@@ -58,35 +100,525 @@ function showMessage(message) {
     }, 3000);
 }
 
+function formatNumber(value) {
+    return Number(value).toLocaleString("fa-IR");
+}
+
+function initializeStorage() {
+    let browserStorage = null;
+
+    try {
+        browserStorage = window.localStorage;
+    } catch (error) {
+        console.error("دسترسی به localStorage ممکن نیست:", error);
+    }
+
+    progressStorage = createProgressStorage(browserStorage);
+
+    if (!progressStorage.getStorageStatus().persistent) {
+        showMessage("ذخیره‌سازی موقت فعال است؛ پیشرفت فعلاً ماندگار نیست.");
+    }
+}
+
+function updateProgress() {
+    try {
+        const state = progressStorage.getAllProgress();
+        const records = Object.values(state.lessons);
+
+        const completed = records.filter(
+            record => record.completed
+        ).length;
+
+        const totalScore = records.reduce(
+            (sum, record) => sum + record.bestScore,
+            0
+        );
+
+        const percentage = Math.round(
+            (completed / lessons.length) * 100
+        );
+
+        scoreValue.textContent = formatNumber(totalScore);
+        completedValue.textContent =
+            `${formatNumber(completed)} از ${formatNumber(lessons.length)}`;
+
+        progressFill.style.width = `${percentage}%`;
+
+        progressCaption.textContent = completed === 0
+            ? "هنوز سفرت را شروع نکرده‌ای؛ آماده‌ای؟"
+            : completed === lessons.length
+                ? "آفرین! همه درس‌ها را تکمیل کرده‌ای."
+                : `${formatNumber(completed)} درس را با موفقیت به پایان رسانده‌ای.`;
+
+    } catch (error) {
+        console.error("خطا در خواندن پیشرفت:", error);
+        showMessage("خواندن اطلاعات پیشرفت با مشکل مواجه شد.");
+    }
+}
+
+function getLessonRecord(lessonId) {
+    try {
+        return progressStorage.getLessonProgress(lessonId);
+    } catch (error) {
+        console.error("خطا در خواندن وضعیت درس:", error);
+        return null;
+    }
+}
+
 function renderLessons() {
     lessonList.replaceChildren();
 
     lessons.forEach((lesson, index) => {
-        const card = document.createElement("article");
-        card.className = `lesson-card ${lesson.color}`;
+        const card = createElement(
+            "article",
+            `lesson-card ${lesson.color}`
+        );
 
-        const number = document.createElement("span");
-        number.className = "lesson-number";
-        number.textContent = `درس ${index + 1}`;
+        const number = createElement(
+            "span",
+            "lesson-number",
+            `درس ${formatNumber(index + 1)}`
+        );
 
-        const icon = document.createElement("span");
-        icon.className = "lesson-icon";
-        icon.textContent = lesson.icon;
+        const icon = createElement(
+            "span",
+            "lesson-icon",
+            lesson.icon
+        );
+
         icon.setAttribute("aria-hidden", "true");
 
-        const title = document.createElement("h3");
-        title.textContent = lesson.title;
+        const title = createElement("h3", "", lesson.title);
+        const description = createElement("p", "", lesson.description);
 
-        const description = document.createElement("p");
-        description.textContent = lesson.description;
+        const record = getLessonRecord(lesson.id);
 
-        const status = document.createElement("span");
-        status.className = "lesson-status";
-        status.textContent = "در حال آماده‌سازی";
+        const statusText = lesson.id === "healthy-food"
+            ? record?.completed
+                ? "تکمیل‌شده"
+                : "آماده شروع"
+            : "در حال آماده‌سازی";
+
+        const status = createElement(
+            "span",
+            "lesson-status",
+            statusText
+        );
 
         card.append(number, icon, title, description, status);
+
+        if (lesson.id === "healthy-food") {
+            const button = createElement(
+                "button",
+                "lesson-start-button",
+                record?.completed ? "مرور درس" : "شروع درس"
+            );
+
+            button.type = "button";
+            button.addEventListener("click", openHealthyFoodLesson);
+
+            card.append(button);
+        }
+
         lessonList.append(card);
     });
+}
+
+function addSection(parent, title, className = "") {
+    const section = createElement("section", className);
+    const heading = createElement("h3", "", title);
+
+    section.append(heading);
+    parent.append(section);
+
+    return section;
+}
+
+function renderList(parent, items) {
+    const list = createElement("ul");
+
+    items.forEach(item => {
+        list.append(createElement("li", "", item));
+    });
+
+    parent.append(list);
+}
+
+function renderLessonOverview() {
+    lessonViewer.replaceChildren();
+
+    const backButton = createElement(
+        "button",
+        "lesson-back-button",
+        "بازگشت به درس‌ها"
+    );
+
+    backButton.type = "button";
+    backButton.addEventListener("click", closeLesson);
+
+    lessonViewer.append(backButton);
+
+    lessonViewer.append(
+        createElement("h2", "", lessonContent.title),
+        createElement("p", "lesson-subtitle", lessonContent.subtitle),
+        createElement("p", "lesson-introduction", lessonContent.introduction)
+    );
+
+    const objectives = addSection(
+        lessonViewer,
+        "در این درس چه یاد می‌گیریم؟"
+    );
+
+    renderList(objectives, lessonContent.learningObjectives);
+
+    const groupsSection = addSection(
+        lessonViewer,
+        "پنج گروه اصلی مواد غذایی",
+        "food-groups"
+    );
+
+    lessonContent.foodGroups.forEach(group => {
+        const article = createElement("article", "food-group-card");
+
+        article.append(
+            createElement(
+                "h4",
+                "",
+                `${group.icon} ${group.title}`
+            ),
+            createElement(
+                "p",
+                "",
+                group.explanation
+            )
+        );
+
+        const examples = addSection(article, "نمونه خوراکی‌ها");
+        renderList(examples, group.examples);
+
+        const nutrients = addSection(article, "مواد مغذی");
+        renderList(nutrients, group.nutrients);
+
+        groupsSection.append(article);
+    });
+
+    const plateSection = addSection(
+        lessonViewer,
+        lessonContent.healthyPlate.title
+    );
+
+    plateSection.append(
+        createElement("p", "", lessonContent.healthyPlate.description)
+    );
+
+    lessonContent.healthyPlate.sections.forEach(section => {
+        const item = createElement(
+            "article",
+            "plate-section"
+        );
+
+        item.append(
+            createElement(
+                "h4",
+                "",
+                `${section.icon} ${section.title} (${formatNumber(section.proportion)}٪)`
+            ),
+            createElement("p", "", section.foods)
+        );
+
+        plateSection.append(item);
+    });
+
+    plateSection.append(
+        createElement(
+            "h4",
+            "",
+            `${lessonContent.healthyPlate.drink.icon} ${lessonContent.healthyPlate.drink.title}`
+        ),
+        createElement(
+            "p",
+            "",
+            lessonContent.healthyPlate.drink.description
+        ),
+        createElement(
+            "p",
+            "important-note",
+            lessonContent.healthyPlate.importantNote
+        )
+    );
+
+    const smartSection = addSection(
+        lessonViewer,
+        lessonContent.smartChoices.title
+    );
+
+    lessonContent.smartChoices.items.forEach(item => {
+        const article = createElement("article", "smart-choice-card");
+
+        article.append(
+            createElement("h4", "", `${item.icon} ${item.title}`),
+            createElement("p", "", item.reason)
+        );
+
+        smartSection.append(article);
+    });
+
+    smartSection.append(
+        createElement(
+            "p",
+            "positive-message",
+            lessonContent.smartChoices.positiveMessage
+        )
+    );
+
+    const startButton = createElement(
+        "button",
+        "quiz-start-button",
+        "شروع فعالیت‌های آموزشی"
+    );
+
+    startButton.type = "button";
+    startButton.addEventListener("click", startQuiz);
+
+    lessonViewer.append(startButton);
+}
+
+function openHealthyFoodLesson() {
+    renderLessonOverview();
+
+    lessonList.hidden = true;
+    lessonViewer.hidden = false;
+
+    lessonViewer.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+function closeLesson() {
+    lessonViewer.hidden = true;
+    lessonList.hidden = false;
+    quizSession = null;
+    pendingFeedback = null;
+
+    lessonList.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+function startQuiz() {
+    quizSession = createQuizSession(
+        lessonContent.interactiveActivities
+    );
+
+    pendingFeedback = null;
+
+    renderActivity();
+}
+
+function renderActivity() {
+    lessonViewer.replaceChildren();
+
+    const progress = getQuizProgress(quizSession);
+    const activity = getCurrentActivity(
+        lessonContent.interactiveActivities,
+        quizSession
+    );
+
+    const heading = createElement(
+        "h2",
+        "",
+        "فعالیت‌های آموزشی"
+    );
+
+    const counter = createElement(
+        "p",
+        "quiz-counter",
+        `فعالیت ${formatNumber(progress.answered + 1)} از ${formatNumber(progress.total)}`
+    );
+
+    const progressText = createElement(
+        "p",
+        "quiz-progress",
+        `${formatNumber(progress.percentage)}٪ پیشرفت`
+    );
+
+    lessonViewer.append(heading, counter, progressText);
+
+    if (!activity) {
+        renderQuizCompletion();
+        return;
+    }
+
+    lessonViewer.append(
+        createElement("h3", "activity-title", activity.title),
+        createElement("p", "activity-question", activity.question)
+    );
+
+    const optionsContainer = createElement(
+        "div",
+        "quiz-options"
+    );
+
+    activity.options.forEach(option => {
+        const button = createElement(
+            "button",
+            "quiz-option",
+            option.text
+        );
+
+        button.type = "button";
+
+        button.addEventListener("click", () => {
+            if (pendingFeedback) {
+                return;
+            }
+
+            quizSession = submitQuizAnswer(
+                quizSession,
+                lessonContent.interactiveActivities,
+                activity.id,
+                option.id
+            );
+
+            pendingFeedback = {
+                isCorrect: option.correct,
+                feedback: option.feedback
+            };
+
+            renderActivityFeedback();
+        });
+
+        optionsContainer.append(button);
+    });
+
+    lessonViewer.append(optionsContainer);
+}
+
+function renderActivityFeedback() {
+    const feedbackBox = createElement(
+        "div",
+        pendingFeedback.isCorrect
+            ? "quiz-feedback correct"
+            : "quiz-feedback incorrect"
+    );
+
+    feedbackBox.setAttribute("role", "status");
+
+    feedbackBox.append(
+        createElement(
+            "h3",
+            "",
+            pendingFeedback.isCorrect ? "آفرین! پاسخ درست بود." : "این پاسخ درست نبود."
+        ),
+        createElement("p", "", pendingFeedback.feedback)
+    );
+
+    const activity = lessonContent.interactiveActivities.find(
+        item => item.id === quizSession.activityIds[
+            getQuizProgress(quizSession).answered - 1
+        ]
+    );
+
+    if (activity?.note) {
+        feedbackBox.append(
+            createElement("p", "activity-note", activity.note)
+        );
+    }
+
+    const continueButton = createElement(
+        "button",
+        "quiz-continue-button",
+        "ادامه"
+    );
+
+    continueButton.type = "button";
+
+    continueButton.addEventListener("click", () => {
+        pendingFeedback = null;
+
+        if (quizSession.completed) {
+            renderQuizCompletion();
+        } else {
+            renderActivity();
+        }
+    });
+
+    lessonViewer.append(feedbackBox, continueButton);
+}
+
+function renderQuizCompletion() {
+    const progress = getQuizProgress(quizSession);
+
+    lessonViewer.replaceChildren(
+        createElement("h2", "", lessonContent.conclusion),
+        createElement(
+            "p",
+            "quiz-result",
+            `امتیاز تو: ${formatNumber(progress.correct)} از ${formatNumber(progress.total)}`
+        )
+    );
+
+    const resultPercentage = Math.round(
+        (progress.correct / progress.total) * 100
+    );
+
+    const resultText = resultPercentage === 100
+        ? "عالی بود! به همه پرسش‌ها درست پاسخ دادی."
+        : resultPercentage >= 60
+            ? "آفرین! نتیجه خوبی گرفتی. می‌توانی درس را دوباره مرور کنی."
+            : "خوب تلاش کردی! مرور دوباره درس به یادگیری بیشتر کمک می‌کند.";
+
+    lessonViewer.append(
+        createElement("p", "quiz-result-message", resultText)
+    );
+
+    try {
+        progressStorage.saveLessonResult(
+            lessonContent.id,
+            {
+                score: progress.correct,
+                total: progress.total,
+                completed: true
+            }
+        );
+
+        updateProgress();
+        renderLessons();
+
+        const storageStatus = progressStorage.getStorageStatus();
+
+        if (!storageStatus.persistent) {
+            showMessage("نتیجه فقط در حافظه موقت ذخیره شد.");
+        } else {
+            showMessage("نتیجه درس با موفقیت ذخیره شد.");
+        }
+
+    } catch (error) {
+        console.error("خطا در ذخیره نتیجه:", error);
+        showMessage("ذخیره نتیجه با مشکل مواجه شد.");
+    }
+
+    const reviewButton = createElement(
+        "button",
+        "quiz-review-button",
+        "مرور دوباره درس"
+    );
+
+    reviewButton.type = "button";
+    reviewButton.addEventListener("click", renderLessonOverview);
+
+    const backButton = createElement(
+        "button",
+        "lesson-back-button",
+        "بازگشت به درس‌ها"
+    );
+
+    backButton.type = "button";
+    backButton.addEventListener("click", closeLesson);
+
+    lessonViewer.append(reviewButton, backButton);
 }
 
 function registerServiceWorker() {
@@ -106,7 +638,7 @@ function registerServiceWorker() {
     });
 }
 
-window.addEventListener("beforeinstallprompt", (event) => {
+window.addEventListener("beforeinstallprompt", event => {
     event.preventDefault();
     deferredInstallPrompt = event;
     installButton.hidden = false;
@@ -134,7 +666,9 @@ window.addEventListener("appinstalled", () => {
     installButton.hidden = true;
 });
 
+initializeStorage();
 renderLessons();
+updateProgress();
 registerServiceWorker();
 
 console.info("برنامه تغذیه سالم راه‌اندازی شد.");

@@ -9,3 +9,7 @@ coverage/
 .env.*
 !.env.example
 *.log
+
+# Local development backups - keep out of Git
+/backups/
+*.backup-*
