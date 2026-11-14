@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "healthy-nutrition-v1";
+const CACHE_NAME = "healthy-nutrition-v2";
 
 const APP_FILES = [
     "./",
@@ -6,7 +6,9 @@ const APP_FILES = [
     "./manifest.json",
     "./src/core/app.js",
     "./src/styles/main.css",
-    "./assets/icons/app-icon.svg"
+    "./assets/icons/app-icon.svg",
+    "./assets/icons/icon-192.png",
+    "./assets/icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
