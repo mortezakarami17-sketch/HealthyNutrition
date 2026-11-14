@@ -1,4 +1,4 @@
-const CACHE_NAME = "healthy-nutrition-v2";
+﻿const CACHE_NAME = "healthy-nutrition-v3";
 
 const APP_FILES = [
     "./",
@@ -6,6 +6,14 @@ const APP_FILES = [
     "./manifest.json",
     "./src/core/app.js",
     "./src/styles/main.css",
+    "./src/shared/storage/progress-storage.js",
+    "./src/lessons/healthy-food/content/content.js",
+    "./src/lessons/healthy-food/quiz/quiz-engine.js",
+    "./src/lessons/school-breakfast/content/content.js",
+    "./src/lessons/healthy-snacks/content/content.js",
+    "./src/lessons/drinking-water/content/content.js",
+    "./src/lessons/handwashing/content/content.js",
+    "./src/lessons/sleep-and-learning/content/content.js",
     "./assets/icons/app-icon.svg",
     "./assets/icons/icon-192.png",
     "./assets/icons/icon-512.png"

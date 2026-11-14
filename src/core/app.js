@@ -1,5 +1,9 @@
-﻿
-import { lessonContent } from "../lessons/healthy-food/content/content.js";
+﻿import { lessonContent as healthyFoodContent } from "../lessons/healthy-food/content/content.js";
+import { lessonContent as schoolBreakfastContent } from "../lessons/school-breakfast/content/content.js";
+import { lessonContent as healthySnacksContent } from "../lessons/healthy-snacks/content/content.js";
+import { lessonContent as drinkingWaterContent } from "../lessons/drinking-water/content/content.js";
+import { lessonContent as handwashingContent } from "../lessons/handwashing/content/content.js";
+import { lessonContent as sleepAndLearningContent } from "../lessons/sleep-and-learning/content/content.js";
 
 import {
     createQuizSession,
@@ -11,6 +15,15 @@ import {
 import {
     createProgressStorage
 } from "../shared/storage/progress-storage.js";
+
+const lessonContents = {
+    "healthy-food": healthyFoodContent,
+    "school-breakfast": schoolBreakfastContent,
+    "healthy-snacks": healthySnacksContent,
+    "drinking-water": drinkingWaterContent,
+    "handwashing": handwashingContent,
+    "sleep-and-learning": sleepAndLearningContent
+};
 
 const lessons = [
     {
@@ -69,7 +82,9 @@ const progressCaption = document.getElementById("progressCaption");
 let deferredInstallPrompt = null;
 let quizSession = null;
 let pendingFeedback = null;
-let progressStorage;
+let progressStorage = null;
+let activeLesson = null;
+let activeLessonContent = null;
 
 const lessonViewer = document.createElement("section");
 lessonViewer.className = "lesson-viewer";
@@ -84,8 +99,8 @@ function createElement(tag, className = "", text = "") {
         element.className = className;
     }
 
-    if (text !== "") {
-        element.textContent = text;
+    if (text !== "" && text !== null && text !== undefined) {
+        element.textContent = String(text);
     }
 
     return element;
@@ -125,9 +140,9 @@ function updateProgress() {
         const state = progressStorage.getAllProgress();
         const records = Object.values(state.lessons);
 
-        const completed = records.filter(
-            record => record.completed
-        ).length;
+        const completed = lessons.filter(lesson => {
+            return Boolean(state.lessons[lesson.id]?.completed);
+        }).length;
 
         const totalScore = records.reduce(
             (sum, record) => sum + record.bestScore,
@@ -139,6 +154,7 @@ function updateProgress() {
         );
 
         scoreValue.textContent = formatNumber(totalScore);
+
         completedValue.textContent =
             `${formatNumber(completed)} از ${formatNumber(lessons.length)}`;
 
@@ -193,11 +209,14 @@ function renderLessons() {
 
         const record = getLessonRecord(lesson.id);
 
-        const statusText = lesson.id === "healthy-food"
-            ? record?.completed
-                ? "تکمیل‌شده"
-                : "آماده شروع"
-            : "در حال آماده‌سازی";
+        let statusText = "آماده شروع";
+
+        if (record?.completed) {
+            statusText = "تکمیل‌شده";
+            card.classList.add("completed");
+        } else if (record) {
+            statusText = "در حال یادگیری";
+        }
 
         const status = createElement(
             "span",
@@ -205,21 +224,18 @@ function renderLessons() {
             statusText
         );
 
-        card.append(number, icon, title, description, status);
+        const button = createElement(
+            "button",
+            "lesson-start-button",
+            record?.completed ? "مرور درس" : "شروع درس"
+        );
 
-        if (lesson.id === "healthy-food") {
-            const button = createElement(
-                "button",
-                "lesson-start-button",
-                record?.completed ? "مرور درس" : "شروع درس"
-            );
+        button.type = "button";
+        button.addEventListener("click", () => {
+            openLesson(lesson.id);
+        });
 
-            button.type = "button";
-            button.addEventListener("click", openHealthyFoodLesson);
-
-            card.append(button);
-        }
-
+        card.append(number, icon, title, description, status, button);
         lessonList.append(card);
     });
 }
@@ -235,18 +251,24 @@ function addSection(parent, title, className = "") {
 }
 
 function renderList(parent, items) {
+    if (!Array.isArray(items) || items.length === 0) {
+        return;
+    }
+
     const list = createElement("ul");
 
     items.forEach(item => {
+        if (item === null || item === undefined) {
+            return;
+        }
+
         list.append(createElement("li", "", item));
     });
 
     parent.append(list);
 }
 
-function renderLessonOverview() {
-    lessonViewer.replaceChildren();
-
+function addBackButton() {
     const backButton = createElement(
         "button",
         "lesson-back-button",
@@ -257,19 +279,44 @@ function renderLessonOverview() {
     backButton.addEventListener("click", closeLesson);
 
     lessonViewer.append(backButton);
+}
 
-    lessonViewer.append(
-        createElement("h2", "", lessonContent.title),
-        createElement("p", "lesson-subtitle", lessonContent.subtitle),
-        createElement("p", "lesson-introduction", lessonContent.introduction)
+function addQuizStartButton() {
+    const startButton = createElement(
+        "button",
+        "quiz-start-button",
+        "شروع فعالیت‌های آموزشی"
     );
+
+    startButton.type = "button";
+    startButton.addEventListener("click", startQuiz);
+
+    lessonViewer.append(startButton);
+}
+
+function renderLessonHeader(content) {
+    lessonViewer.append(
+        createElement("h2", "", content.title),
+        createElement("p", "lesson-subtitle", content.subtitle),
+        createElement("p", "lesson-introduction", content.introduction)
+    );
+}
+
+/*
+ * درس اول از ساختار اختصاصی قدیمی استفاده می‌کند.
+ * این بخش عمداً با همان ساختار قبلی حفظ شده است.
+ */
+function renderHealthyFoodOverview() {
+    const content = activeLessonContent;
+
+    renderLessonHeader(content);
 
     const objectives = addSection(
         lessonViewer,
         "در این درس چه یاد می‌گیریم؟"
     );
 
-    renderList(objectives, lessonContent.learningObjectives);
+    renderList(objectives, content.learningObjectives);
 
     const groupsSection = addSection(
         lessonViewer,
@@ -277,20 +324,12 @@ function renderLessonOverview() {
         "food-groups"
     );
 
-    lessonContent.foodGroups.forEach(group => {
+    content.foodGroups.forEach(group => {
         const article = createElement("article", "food-group-card");
 
         article.append(
-            createElement(
-                "h4",
-                "",
-                `${group.icon} ${group.title}`
-            ),
-            createElement(
-                "p",
-                "",
-                group.explanation
-            )
+            createElement("h4", "", `${group.icon} ${group.title}`),
+            createElement("p", "", group.explanation)
         );
 
         const examples = addSection(article, "نمونه خوراکی‌ها");
@@ -304,18 +343,15 @@ function renderLessonOverview() {
 
     const plateSection = addSection(
         lessonViewer,
-        lessonContent.healthyPlate.title
+        content.healthyPlate.title
     );
 
     plateSection.append(
-        createElement("p", "", lessonContent.healthyPlate.description)
+        createElement("p", "", content.healthyPlate.description)
     );
 
-    lessonContent.healthyPlate.sections.forEach(section => {
-        const item = createElement(
-            "article",
-            "plate-section"
-        );
+    content.healthyPlate.sections.forEach(section => {
+        const item = createElement("article", "plate-section");
 
         item.append(
             createElement(
@@ -333,26 +369,26 @@ function renderLessonOverview() {
         createElement(
             "h4",
             "",
-            `${lessonContent.healthyPlate.drink.icon} ${lessonContent.healthyPlate.drink.title}`
+            `${content.healthyPlate.drink.icon} ${content.healthyPlate.drink.title}`
         ),
         createElement(
             "p",
             "",
-            lessonContent.healthyPlate.drink.description
+            content.healthyPlate.drink.description
         ),
         createElement(
             "p",
             "important-note",
-            lessonContent.healthyPlate.importantNote
+            content.healthyPlate.importantNote
         )
     );
 
     const smartSection = addSection(
         lessonViewer,
-        lessonContent.smartChoices.title
+        content.smartChoices.title
     );
 
-    lessonContent.smartChoices.items.forEach(item => {
+    content.smartChoices.items.forEach(item => {
         const article = createElement("article", "smart-choice-card");
 
         article.append(
@@ -367,23 +403,182 @@ function renderLessonOverview() {
         createElement(
             "p",
             "positive-message",
-            lessonContent.smartChoices.positiveMessage
+            content.smartChoices.positiveMessage
         )
     );
-
-    const startButton = createElement(
-        "button",
-        "quiz-start-button",
-        "شروع فعالیت‌های آموزشی"
-    );
-
-    startButton.type = "button";
-    startButton.addEventListener("click", startQuiz);
-
-    lessonViewer.append(startButton);
 }
 
-function openHealthyFoodLesson() {
+function renderCallout(parent, callout) {
+    if (!callout) {
+        return;
+    }
+
+    const box = createElement("p", "important-note");
+
+    if (typeof callout === "string") {
+        box.textContent = callout;
+    } else if (typeof callout === "object") {
+        const title = callout.title || callout.heading || "";
+        const text = callout.text
+            || callout.content
+            || callout.description
+            || callout.message
+            || "";
+
+        if (title) {
+            box.append(createElement("strong", "", `${title} `));
+        }
+
+        if (text) {
+            box.append(document.createTextNode(String(text)));
+        }
+    }
+
+    if (box.textContent.trim()) {
+        parent.append(box);
+    }
+}
+
+function renderGenericSections(content) {
+    if (
+        !Array.isArray(content.sections) ||
+        content.sections.length === 0
+    ) {
+        return;
+    }
+
+    content.sections.forEach((item, index) => {
+        const section = addSection(
+            lessonViewer,
+            item.title || `بخش ${formatNumber(index + 1)}`
+        );
+
+        if (Array.isArray(item.paragraphs)) {
+            item.paragraphs.forEach(paragraph => {
+                section.append(
+                    createElement("p", "", paragraph)
+                );
+            });
+        }
+
+        if (Array.isArray(item.bullets)) {
+            renderList(section, item.bullets);
+        }
+
+        renderCallout(section, item.callout);
+    });
+}
+
+function renderSources(content) {
+    if (!Array.isArray(content.sources) || content.sources.length === 0) {
+        return;
+    }
+
+    const sourcesSection = addSection(
+        lessonViewer,
+        "منابع علمی و آموزشی"
+    );
+
+    const list = createElement("ul");
+
+    content.sources.forEach(source => {
+        const item = createElement("li");
+        const label = [
+            source.title,
+            source.organization
+        ].filter(Boolean).join(" — ");
+
+        if (source.url) {
+            try {
+                const url = new URL(source.url);
+
+                if (url.protocol === "https:" || url.protocol === "http:") {
+                    const link = createElement(
+                        "a",
+                        "",
+                        label || source.url
+                    );
+
+                    link.href = url.href;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    item.append(link);
+                } else {
+                    item.textContent = label || source.url;
+                }
+            } catch {
+                item.textContent = label || source.url;
+            }
+        } else {
+            item.textContent = label || "منبع آموزشی";
+        }
+
+        list.append(item);
+    });
+
+    sourcesSection.append(list);
+}
+
+function renderGenericOverview() {
+    const content = activeLessonContent;
+
+    renderLessonHeader(content);
+
+    const objectives = addSection(
+        lessonViewer,
+        "در این درس چه یاد می‌گیریم؟"
+    );
+
+    renderList(objectives, content.learningObjectives);
+
+    renderGenericSections(content);
+
+    if (content.conclusion) {
+        const conclusion = addSection(
+            lessonViewer,
+            "جمع‌بندی درس"
+        );
+
+        conclusion.append(
+            createElement("p", "positive-message", content.conclusion)
+        );
+    }
+
+    renderSources(content);
+}
+
+function renderLessonOverview() {
+    if (!activeLessonContent || !activeLesson) {
+        return;
+    }
+
+    lessonViewer.replaceChildren();
+    addBackButton();
+
+    if (activeLesson.id === "healthy-food") {
+        renderHealthyFoodOverview();
+    } else {
+        renderGenericOverview();
+    }
+
+    addQuizStartButton();
+}
+
+function openLesson(lessonId) {
+    const lesson = lessons.find(item => item.id === lessonId);
+    const content = lessonContents[lessonId];
+
+    if (!lesson || !content) {
+        showMessage("محتوای این درس پیدا نشد.");
+        console.error("Lesson content not found:", lessonId);
+        return;
+    }
+
+    activeLesson = lesson;
+    activeLessonContent = content;
+    quizSession = null;
+    pendingFeedback = null;
+
     renderLessonOverview();
 
     lessonList.hidden = true;
@@ -398,8 +593,11 @@ function openHealthyFoodLesson() {
 function closeLesson() {
     lessonViewer.hidden = true;
     lessonList.hidden = false;
+
     quizSession = null;
     pendingFeedback = null;
+    activeLesson = null;
+    activeLessonContent = null;
 
     lessonList.scrollIntoView({
         behavior: "smooth",
@@ -408,23 +606,34 @@ function closeLesson() {
 }
 
 function startQuiz() {
-    quizSession = createQuizSession(
-        lessonContent.interactiveActivities
-    );
+    if (!activeLessonContent) {
+        showMessage("ابتدا یک درس را انتخاب کن.");
+        return;
+    }
 
-    pendingFeedback = null;
+    try {
+        quizSession = createQuizSession(
+            activeLessonContent.interactiveActivities
+        );
 
-    renderActivity();
+        pendingFeedback = null;
+        renderActivity();
+    } catch (error) {
+        console.error("خطا در شروع آزمون:", error);
+        showMessage("شروع فعالیت‌ها با مشکل مواجه شد.");
+    }
 }
 
 function renderActivity() {
+    if (!quizSession || !activeLessonContent) {
+        return;
+    }
+
     lessonViewer.replaceChildren();
 
+    const activities = activeLessonContent.interactiveActivities;
     const progress = getQuizProgress(quizSession);
-    const activity = getCurrentActivity(
-        lessonContent.interactiveActivities,
-        quizSession
-    );
+    const activity = getCurrentActivity(activities, quizSession);
 
     const heading = createElement(
         "h2",
@@ -456,10 +665,7 @@ function renderActivity() {
         createElement("p", "activity-question", activity.question)
     );
 
-    const optionsContainer = createElement(
-        "div",
-        "quiz-options"
-    );
+    const optionsContainer = createElement("div", "quiz-options");
 
     activity.options.forEach(option => {
         const button = createElement(
@@ -471,23 +677,28 @@ function renderActivity() {
         button.type = "button";
 
         button.addEventListener("click", () => {
-            if (pendingFeedback) {
+            if (pendingFeedback || !quizSession) {
                 return;
             }
 
-            quizSession = submitQuizAnswer(
-                quizSession,
-                lessonContent.interactiveActivities,
-                activity.id,
-                option.id
-            );
+            try {
+                quizSession = submitQuizAnswer(
+                    quizSession,
+                    activities,
+                    activity.id,
+                    option.id
+                );
 
-            pendingFeedback = {
-                isCorrect: option.correct,
-                feedback: option.feedback
-            };
+                pendingFeedback = {
+                    isCorrect: option.correct,
+                    feedback: option.feedback
+                };
 
-            renderActivityFeedback();
+                renderActivityFeedback();
+            } catch (error) {
+                console.error("خطا در ثبت پاسخ:", error);
+                showMessage("ثبت پاسخ با مشکل مواجه شد.");
+            }
         });
 
         optionsContainer.append(button);
@@ -497,6 +708,10 @@ function renderActivity() {
 }
 
 function renderActivityFeedback() {
+    if (!pendingFeedback || !quizSession || !activeLessonContent) {
+        return;
+    }
+
     const feedbackBox = createElement(
         "div",
         pendingFeedback.isCorrect
@@ -510,15 +725,17 @@ function renderActivityFeedback() {
         createElement(
             "h3",
             "",
-            pendingFeedback.isCorrect ? "آفرین! پاسخ درست بود." : "این پاسخ درست نبود."
+            pendingFeedback.isCorrect
+                ? "آفرین! پاسخ درست بود."
+                : "این پاسخ درست نبود."
         ),
         createElement("p", "", pendingFeedback.feedback)
     );
 
-    const activity = lessonContent.interactiveActivities.find(
-        item => item.id === quizSession.activityIds[
-            getQuizProgress(quizSession).answered - 1
-        ]
+    const progress = getQuizProgress(quizSession);
+
+    const activity = activeLessonContent.interactiveActivities.find(
+        item => item.id === quizSession.activityIds[progress.answered - 1]
     );
 
     if (activity?.note) {
@@ -549,10 +766,14 @@ function renderActivityFeedback() {
 }
 
 function renderQuizCompletion() {
+    if (!quizSession || !activeLessonContent) {
+        return;
+    }
+
     const progress = getQuizProgress(quizSession);
 
     lessonViewer.replaceChildren(
-        createElement("h2", "", lessonContent.conclusion),
+        createElement("h2", "", activeLessonContent.conclusion),
         createElement(
             "p",
             "quiz-result",
@@ -576,7 +797,7 @@ function renderQuizCompletion() {
 
     try {
         progressStorage.saveLessonResult(
-            lessonContent.id,
+            activeLessonContent.id,
             {
                 score: progress.correct,
                 total: progress.total,
@@ -594,7 +815,6 @@ function renderQuizCompletion() {
         } else {
             showMessage("نتیجه درس با موفقیت ذخیره شد.");
         }
-
     } catch (error) {
         console.error("خطا در ذخیره نتیجه:", error);
         showMessage("ذخیره نتیجه با مشکل مواجه شد.");
@@ -671,4 +891,4 @@ renderLessons();
 updateProgress();
 registerServiceWorker();
 
-console.info("برنامه تغذیه سالم راه‌اندازی شد.");
+console.info("برنامه تغذیه سالم با شش درس راه‌اندازی شد.");
