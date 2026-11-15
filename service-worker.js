@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "healthy-nutrition-v6";
+﻿const CACHE_NAME = "healthy-nutrition-v7";
 
 const APP_FILES = [
     "./",
@@ -6,6 +6,7 @@ const APP_FILES = [
     "./manifest.json",
     "./src/core/app.js",
     "./src/styles/main.css",
+    "./assets/images/food-pyramid.jpg",
     "./src/shared/storage/progress-storage.js",
     "./src/shared/ui/award-celebration.js",
     "./src/lessons/healthy-food/content/content.js",

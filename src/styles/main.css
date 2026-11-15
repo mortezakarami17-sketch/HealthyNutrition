@@ -1265,3 +1265,95 @@ button[hidden],
 [hidden] {
     display: none !important;
 }
+
+/* FOOD PYRAMID SECTION */
+.food-pyramid-section {
+    margin: 28px 0;
+}
+
+.food-pyramid-card {
+    background: var(--card-background, #ffffff);
+    border: 1px solid rgba(45, 125, 90, 0.16);
+    border-radius: 22px;
+    padding: clamp(14px, 3vw, 26px);
+    box-shadow: 0 8px 24px rgba(30, 80, 55, 0.07);
+}
+
+.food-pyramid-image {
+    display: block;
+    width: 100%;
+    max-width: 760px;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto 20px;
+    border-radius: 14px;
+}
+
+.water-reminder {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    margin: 12px 0 22px;
+    background: #e8f6ff;
+    border: 1px solid #b7e1fa;
+    border-radius: 16px;
+    color: #174d70;
+}
+
+.water-reminder-icon {
+    flex: 0 0 auto;
+    font-size: 2.3rem;
+}
+
+.water-reminder h3,
+.food-pyramid-explanation h3 {
+    margin: 0 0 10px;
+    line-height: 1.7;
+}
+
+.water-reminder p,
+.food-pyramid-explanation p {
+    margin: 0;
+    line-height: 2;
+}
+
+.food-pyramid-explanation {
+    color: var(--text-color, #26352e);
+    line-height: 2;
+}
+
+.food-pyramid-explanation ul {
+    padding-right: 24px;
+    margin: 12px 0;
+}
+
+.food-pyramid-explanation li {
+    margin: 8px 0;
+    line-height: 2;
+}
+
+.food-pyramid-note {
+    margin-top: 16px !important;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f1f8e9;
+    color: #365d31;
+}
+
+@media (max-width: 600px) {
+    .food-pyramid-card {
+        padding: 12px;
+        border-radius: 16px;
+    }
+    .food-pyramid-image {
+        margin-bottom: 14px;
+    }
+    .water-reminder {
+        align-items: flex-start;
+        padding: 12px;
+    }
+    .food-pyramid-explanation ul {
+        padding-right: 20px;
+    }
+}
