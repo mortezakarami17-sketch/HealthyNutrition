@@ -1,4 +1,4 @@
-﻿import { lessonContent as healthyFoodContent } from "../lessons/healthy-food/content/content.js";
+import { lessonContent as healthyFoodContent } from "../lessons/healthy-food/content/content.js";
 import { lessonContent as schoolBreakfastContent } from "../lessons/school-breakfast/content/content.js";
 import { lessonContent as healthySnacksContent } from "../lessons/healthy-snacks/content/content.js";
 import { lessonContent as drinkingWaterContent } from "../lessons/drinking-water/content/content.js";
@@ -15,6 +15,11 @@ import {
 import {
     createProgressStorage
 } from "../shared/storage/progress-storage.js";
+
+import {
+    queueAwardCelebrations,
+    startAwardCelebrations
+} from "../shared/ui/award-celebration.js";
 
 const lessonContents = {
     "healthy-food": healthyFoodContent,
@@ -76,6 +81,13 @@ const appMessage = document.getElementById("appMessage");
 
 const scoreValue = document.getElementById("scoreValue");
 const completedValue = document.getElementById("completedValue");
+const trophyCount = document.getElementById("trophyCount");
+const awardClaimButton = document.getElementById("awardClaimButton");
+const trophyElements = {
+    bronze: { medal: document.getElementById("bronzeTrophy"), item: document.getElementById("bronzeTrophyItem"), symbol: String.fromCodePoint(0x1F949) },
+    silver: { medal: document.getElementById("silverTrophy"), item: document.getElementById("silverTrophyItem"), symbol: String.fromCodePoint(0x1F948) },
+    gold: { medal: document.getElementById("goldTrophy"), item: document.getElementById("goldTrophyItem"), symbol: String.fromCodePoint(0x1F3C6) }
+};
 const progressFill = document.getElementById("progressFill");
 const progressCaption = document.getElementById("progressCaption");
 
@@ -135,6 +147,45 @@ function initializeStorage() {
     }
 }
 
+const AWARD_STATE_KEY = "healthy-nutrition-awards";
+const AWARD_THRESHOLDS = [
+    { tier: "bronze", threshold: 2 },
+    { tier: "silver", threshold: 4 },
+    { tier: "gold", threshold: 6 }
+];
+
+function readAwardState() {
+    try {
+        const raw = window.localStorage.getItem(AWARD_STATE_KEY);
+        if (!raw) return { claimed: [] };
+
+        const parsed = JSON.parse(raw);
+        const validTiers = ["bronze", "silver", "gold"];
+
+        return {
+            claimed: Array.isArray(parsed.claimed)
+                ? [...new Set(parsed.claimed.filter(tier => validTiers.includes(tier)))]
+                : []
+        };
+    } catch (error) {
+        console.warn("Could not read award state:", error);
+        return { claimed: [] };
+    }
+}
+
+function saveAwardState(claimed) {
+    try {
+        window.localStorage.setItem(
+            AWARD_STATE_KEY,
+            JSON.stringify({ version: 1, claimed })
+        );
+        return true;
+    } catch (error) {
+        console.warn("Could not save award state:", error);
+        return false;
+    }
+}
+
 function updateProgress() {
     try {
         const state = progressStorage.getAllProgress();
@@ -157,6 +208,31 @@ function updateProgress() {
 
         completedValue.textContent =
             `${formatNumber(completed)} از ${formatNumber(lessons.length)}`;
+
+        const trophyThresholds = [["bronze", 2], ["silver", 4], ["gold", 6]];
+        let earnedTrophyCount = 0;
+        trophyThresholds.forEach(([tier, threshold]) => {
+            const trophy = trophyElements[tier];
+            const earned = completed >= threshold;
+            if (earned) earnedTrophyCount += 1;
+            trophy.medal.textContent = earned ? trophy.symbol : String.fromCodePoint(0x1F512);
+            trophy.item.classList.toggle("is-earned", earned);
+            trophy.item.setAttribute("aria-label", earned ? "\u06a9\u0627\u067e \u06a9\u0633\u0628 \u0634\u062f\u0647 \u0627\u0633\u062a" : "\u0642\u0641\u0644 \u0627\u0633\u062a\u061b \u062a\u06a9\u0645\u06cc\u0644 " + formatNumber(threshold) + " \u062f\u0631\u0633 \u0644\u0627\u0632\u0645 \u0627\u0633\u062a");
+        });
+        trophyCount.textContent = formatNumber(earnedTrophyCount) + " \u0627\u0632 " + formatNumber(3);
+
+        const earnedTiers = AWARD_THRESHOLDS
+            .filter(award => completed >= award.threshold)
+            .map(award => award.tier);
+
+        const claimedTiers = readAwardState().claimed;
+        const pendingTiers = earnedTiers.filter(tier => !claimedTiers.includes(tier));
+
+        awardClaimButton.hidden = pendingTiers.length === 0;
+        awardClaimButton.disabled = false;
+        awardClaimButton.textContent =
+            "\u062f\u0631\u06cc\u0627\u0641\u062a \u06a9\u0627\u067e\u200c\u0647\u0627\u06cc \u06a9\u0633\u0628\u200c\u0634\u062f\u0647"
+            + " (" + formatNumber(pendingTiers.length) + ")";
 
         progressFill.style.width = `${percentage}%`;
 
@@ -884,6 +960,47 @@ installButton.addEventListener("click", async () => {
 window.addEventListener("appinstalled", () => {
     showMessage("برنامه با موفقیت نصب شد.");
     installButton.hidden = true;
+});
+
+awardClaimButton.addEventListener("click", () => {
+    try {
+        const state = progressStorage.getAllProgress();
+
+        const completed = lessons.filter(lesson => {
+            return Boolean(state.lessons[lesson.id]?.completed);
+        }).length;
+
+        const claimedTiers = readAwardState().claimed;
+        const pendingTiers = AWARD_THRESHOLDS
+            .filter(award => completed >= award.threshold)
+            .map(award => award.tier)
+            .filter(tier => !claimedTiers.includes(tier));
+
+        if (pendingTiers.length === 0) {
+            updateProgress();
+            return;
+        }
+
+        awardClaimButton.disabled = true;
+        queueAwardCelebrations(pendingTiers);
+
+        startAwardCelebrations(() => {
+            const latestClaimed = readAwardState().claimed;
+            const allClaimed = [...new Set([...latestClaimed, ...pendingTiers])];
+            const saved = saveAwardState(allClaimed);
+
+            awardClaimButton.disabled = false;
+            updateProgress();
+
+            if (!saved) {
+                showMessage("\u0630\u062e\u06cc\u0631\u0647 \u0648\u0636\u0639\u06cc\u062a \u06a9\u0627\u067e\u200c\u0647\u0627 \u0645\u0645\u06a9\u0646 \u0646\u0634\u062f.");
+            }
+        });
+    } catch (error) {
+        console.error("Award claim failed:", error);
+        awardClaimButton.disabled = false;
+        showMessage("\u062f\u0631\u06cc\u0627\u0641\u062a \u06a9\u0627\u067e \u0628\u0627 \u062e\u0637\u0627 \u0645\u0648\u0627\u062c\u0647 \u0634\u062f.");
+    }
 });
 
 initializeStorage();

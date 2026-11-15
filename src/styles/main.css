@@ -1,4 +1,4 @@
-
+﻿
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');
 
 :root {
@@ -973,4 +973,295 @@ a {
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
     }
+}
+
+/* =========================================
+   Trophy award celebration
+   ========================================= */
+
+.award-celebration {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: 20px;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(255, 215, 105, .25), transparent 38%),
+        rgba(10, 25, 42, .88);
+    backdrop-filter: blur(7px);
+    animation: award-overlay-in .35s ease both;
+}
+
+.award-celebration-content {
+    position: relative;
+    z-index: 2;
+    width: min(100%, 440px);
+    padding: 34px 24px 28px;
+    text-align: center;
+    color: var(--ink, #193b50);
+    background: linear-gradient(160deg, #ffffff, #fffaf0);
+    border: 2px solid rgba(255, 215, 105, .8);
+    border-radius: 28px;
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, .35),
+        0 0 45px rgba(255, 215, 105, .25);
+    animation: award-card-in .75s cubic-bezier(.18, .9, .25, 1.2) both;
+}
+
+.award-cup {
+    display: grid;
+    place-items: center;
+    width: 142px;
+    height: 142px;
+    margin: 0 auto 14px;
+    font-size: 100px;
+    line-height: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff4c5 0%, #ffe7a0 48%, transparent 72%);
+    filter: drop-shadow(0 12px 15px rgba(130, 91, 18, .22));
+    animation: award-cup-rise .9s cubic-bezier(.18, .9, .25, 1.3) both,
+        award-cup-glow 2s ease-in-out 1s infinite alternate;
+}
+
+.award-celebration-content h2 {
+    margin: 8px 0 12px;
+    color: #173e52;
+    font-size: clamp(25px, 6vw, 34px);
+    font-weight: 900;
+}
+
+.award-title {
+    margin: 0 0 10px;
+    color: #a87516;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.award-message {
+    margin: 0 auto 22px;
+    max-width: 340px;
+    color: #526b78;
+    font-size: 15px;
+    line-height: 2;
+}
+
+.award-close-button {
+    min-width: 160px;
+    padding: 12px 24px;
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #1b9b83, #27b89b);
+    box-shadow: 0 7px 18px rgba(27, 155, 131, .25);
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.award-close-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(27, 155, 131, .32);
+}
+
+.award-close-button:focus-visible {
+    outline: 3px solid #f2bd45;
+    outline-offset: 4px;
+}
+
+.award-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.award-confetti-piece {
+    position: absolute;
+    top: -24px;
+    left: var(--confetti-left);
+    width: 9px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--confetti-color);
+    opacity: 0;
+    transform: rotate(var(--confetti-rotation));
+    animation: award-confetti-fall var(--confetti-duration) ease-in var(--confetti-delay) forwards;
+}
+
+.award-bronze .award-celebration-content {
+    border-color: rgba(190, 119, 65, .75);
+}
+
+.award-bronze .award-title {
+    color: #a65f32;
+}
+
+.award-silver .award-celebration-content {
+    border-color: rgba(155, 169, 184, .9);
+}
+
+.award-silver .award-title {
+    color: #687d91;
+}
+
+.award-gold .award-celebration-content {
+    border-color: rgba(255, 196, 54, .95);
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, .35),
+        0 0 65px rgba(255, 204, 75, .4);
+}
+
+.award-gold .award-title {
+    color: #b47b08;
+}
+
+.award-celebration-closing {
+    animation: award-overlay-out .25s ease both;
+}
+
+.award-celebration-closing .award-celebration-content {
+    animation: award-card-out .25s ease both;
+}
+
+@keyframes award-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes award-overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes award-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(45px) scale(.78);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes award-card-out {
+    to {
+        opacity: 0;
+        transform: translateY(20px) scale(.94);
+    }
+}
+
+@keyframes award-cup-rise {
+    0% {
+        opacity: 0;
+        transform: translateY(65px) scale(.45) rotate(-12deg);
+    }
+    75% {
+        transform: translateY(-8px) scale(1.08) rotate(4deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0);
+    }
+}
+
+@keyframes award-cup-glow {
+    from {
+        filter: drop-shadow(0 8px 12px rgba(130, 91, 18, .18));
+    }
+    to {
+        filter: drop-shadow(0 12px 24px rgba(222, 165, 39, .48));
+    }
+}
+
+@keyframes award-confetti-fall {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, -20px, 0) rotate(0);
+    }
+    10% {
+        opacity: 1;
+    }
+    100% {
+        opacity: .9;
+        transform: translate3d(35px, 110vh, 0) rotate(720deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .award-celebration {
+        padding: 14px;
+    }
+
+    .award-celebration-content {
+        padding: 28px 18px 24px;
+        border-radius: 23px;
+    }
+
+    .award-cup {
+        width: 120px;
+        height: 120px;
+        font-size: 84px;
+    }
+
+    .award-message {
+        font-size: 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .award-celebration,
+    .award-celebration-content,
+    .award-cup,
+    .award-confetti-piece,
+    .award-close-button {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .award-confetti-piece {
+        display: none;
+    }
+}
+
+
+/* Respect reduced-motion preference for trophy celebrations */
+@media (prefers-reduced-motion: reduce) {
+    .award-celebration,
+    .award-celebration-content,
+    .award-cup,
+    .award-confetti-piece {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .award-confetti-piece {
+        display: none !important;
+    }
+}
+/* Trophy progress showcase */
+.trophy-showcase { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0 14px; }
+.trophy-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; padding: 12px 6px; border: 1px solid var(--border, #e5e7eb); border-radius: 14px; background: var(--surface, #fff); color: var(--muted); text-align: center; opacity: .72; transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.trophy-item.is-earned { opacity: 1; color: var(--ink); border-color: var(--accent, #d6ad55); box-shadow: 0 4px 16px rgba(180, 140, 55, .13); }
+.trophy-medal { display: block; min-height: 38px; font-size: 30px; line-height: 1.25; filter: grayscale(1); }
+.trophy-item.is-earned .trophy-medal { filter: none; animation: trophy-unlock 450ms ease-out both; }
+.trophy-name { font-size: 12px; font-weight: 800; }
+.trophy-item small { font-size: 10px; line-height: 1.5; color: var(--muted); }
+@keyframes trophy-unlock { 0% { transform: scale(.75); } 65% { transform: scale(1.16); } 100% { transform: scale(1); } }
+@media (max-width: 380px) { .trophy-showcase { gap: 6px; } .trophy-item { padding: 10px 3px; } .trophy-name { font-size: 11px; } .trophy-item small { font-size: 9px; } }
+@media (prefers-reduced-motion: reduce) { .trophy-item, .trophy-medal { animation: none !important; transition: none !important; } }
+/* Ensure hidden elements stay hidden */
+[hidden] {
+    display: none !important;
+}
+/* Keep all hidden buttons and elements hidden */
+button[hidden],
+.primary-button[hidden],
+.install-button[hidden],
+[hidden] {
+    display: none !important;
 }

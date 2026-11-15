@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "healthy-nutrition-v3";
+﻿const CACHE_NAME = "healthy-nutrition-v6";
 
 const APP_FILES = [
     "./",
@@ -7,6 +7,7 @@ const APP_FILES = [
     "./src/core/app.js",
     "./src/styles/main.css",
     "./src/shared/storage/progress-storage.js",
+    "./src/shared/ui/award-celebration.js",
     "./src/lessons/healthy-food/content/content.js",
     "./src/lessons/healthy-food/quiz/quiz-engine.js",
     "./src/lessons/school-breakfast/content/content.js",
